@@ -17,13 +17,19 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package fr.s13d.photobackup;
+package fr.s13d.photobackup.broadcastReceiver;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.wifi.WifiManager;
 import android.os.IBinder;
+
+import fr.s13d.photobackup.Log;
+import fr.s13d.photobackup.PBMedia;
+import fr.s13d.photobackup.PBMediaStore;
+import fr.s13d.photobackup.PBService;
+import fr.s13d.photobackup.preferences.PreferenceWrapper;
 
 public class PBWifiBroadcastReceiver extends BroadcastReceiver {
     private static final String LOG_TAG = "PBWifiBroadcastReceiver";

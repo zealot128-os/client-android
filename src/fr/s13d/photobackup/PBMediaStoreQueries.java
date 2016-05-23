@@ -19,18 +19,15 @@
 package fr.s13d.photobackup;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
-import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Set;
 
-import fr.s13d.photobackup.preferences.PBPreferenceFragment;
+import fr.s13d.photobackup.preferences.PreferenceWrapper;
 
 
 public class PBMediaStoreQueries {
@@ -38,42 +35,23 @@ public class PBMediaStoreQueries {
     private static final String LOG_TAG = "PBMediaStoreQueries";
     private static Context context;
     private static final Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-    private final SharedPreferences prefs;
+    private final PreferenceWrapper prefs;
 
 
     public PBMediaStoreQueries(Context theContext) {
         context = theContext;
-        prefs = PreferenceManager.getDefaultSharedPreferences(context);
-    }
-
-    public boolean isSelectedBucket(String bucketId) {
-        Set<String> buckets = prefs.getStringSet(PBPreferenceFragment.PREF_BUCKETS, null);
-        // User has selected nothing - all buckets ok!
-        if (buckets == null || buckets.size() == 0) {
-            return true;
-        }
-        Log.d(LOG_TAG, "Checking if " + bucketId + " is selected by user..");
-
-        for (String bucket: buckets) {
-            if(bucket.equals(bucketId)) {
-                Log.d(LOG_TAG, "Is selected bucket! Continuing");
-                return true;
-            }
-        }
-        Log.i(LOG_TAG, "Is not in selected buckets - Ignoring");
-        return false;
+        //prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        prefs = new PreferenceWrapper(theContext);
     }
 
     public Cursor getAllMedia() {
-        String where;
+        String where = null;
         Cursor cursor = null;
         final String[] projection = new String[] { "_id", "_data", "date_added" };
-        Set<String> buckets = prefs.getStringSet(PBPreferenceFragment.PREF_BUCKETS, null);
+        Set<String> buckets = prefs.getBuckets();
         if (buckets != null && buckets.size() > 0) {
             String args = TextUtils.join(", ", buckets);
             where = "bucket_id in (" + args + ")";
-        } else {
-            where = null;
         }
         try {
             cursor = context.getContentResolver().query(uri, projection, where, null, "date_added DESC");
@@ -83,6 +61,8 @@ public class PBMediaStoreQueries {
         return cursor;
     }
 
+    // called by MediaStore if user just made a photo
+    // we check, if that photo is in the list of selected buckets and return that or null
     public Integer getLastMediaIdInStore() {
         int id = 0;
         String bucketId = "";
@@ -95,8 +75,12 @@ public class PBMediaStoreQueries {
             bucketId = cursor.getString(bucketColumn);
         }
         closeCursor(cursor);
-        isSelectedBucket(bucketId);
-        return id;
+        if (prefs.isSelectedBucket(bucketId)) {
+            return id;
+
+        } else {
+            return 0;
+        }
     }
 
     public Cursor getMediaById(Integer id) {
@@ -108,6 +92,7 @@ public class PBMediaStoreQueries {
             return null;
         }
     }
+
     public LinkedHashMap<String,String> getAllBucketNames() {
         // which image properties are we querying
         String[] PROJECTION_BUCKET = {

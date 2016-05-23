@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import fr.s13d.photobackup.interfaces.PBMediaSenderInterface;
+import fr.s13d.photobackup.preferences.PreferenceWrapper;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;

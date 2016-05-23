@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 
 import fr.s13d.photobackup.interfaces.PBMediaStoreInterface;
+import fr.s13d.photobackup.preferences.PreferenceWrapper;
 
 public class PBMediaStore {
 
@@ -55,7 +56,6 @@ public class PBMediaStore {
         picturesPreferencesEditor.apply();
         queries = new PBMediaStoreQueries(context);
     }
-
 
     private static void setMediaListToNull(){
         mediaList = null;
@@ -84,12 +84,10 @@ public class PBMediaStore {
         if (syncTask != null) {
             syncTask.cancel(true);
         }
-
         setMediaListToNull();
         setPicturesPreferencesToNull();
         setPicturesPreferencesEditorToNull();
     }
-
 
     public PBMedia getMedia(int id) {
         PBMedia media = null;
@@ -98,12 +96,13 @@ public class PBMediaStore {
         }
         Cursor cursor = queries.getMediaById(id);
         if (cursor == null) {
-            Log.e(LOG_TAG, "Photo not returned. Probably filtered by Bucket or deleted");
+            Log.e(LOG_TAG, "Photo not returned. Probably deleted");
             return null;
         }
         Integer idCol = cursor.getColumnIndex(MediaStore.Images.Media.BUCKET_ID);
-        queries.isSelectedBucket(cursor.getString(idCol));
-
+        if (new PreferenceWrapper(context).isSelectedBucket(cursor.getString(idCol))) {
+            return null;
+        }
 
         media = new PBMedia(context, cursor);
         try {
@@ -119,12 +118,9 @@ public class PBMediaStore {
         return media;
     }
 
-
     public List<PBMedia> getMedias() {
         return mediaList;
     }
-
-
 
 
     /////////////////////////////////
@@ -135,14 +131,9 @@ public class PBMediaStore {
             syncTask.cancel(true);
         }
 
-        syncTask=new SyncMediaStoreTask();
+        syncTask = new SyncMediaStoreTask();
         syncTask.execute();
         Log.i(LOG_TAG, "Start SyncMediaStoreTask");
-    }
-
-
-    private static  SyncMediaStoreTask getSyncMediaStoreTask(){
-        return syncTask;
     }
 
     private class SyncMediaStoreTask extends AsyncTask<Void, Void, Void> {

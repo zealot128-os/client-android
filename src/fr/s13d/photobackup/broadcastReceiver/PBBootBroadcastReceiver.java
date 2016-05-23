@@ -17,7 +17,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-package fr.s13d.photobackup;
+package fr.s13d.photobackup.broadcastReceiver;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -25,6 +25,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
+import fr.s13d.photobackup.PBService;
 import fr.s13d.photobackup.preferences.PBPreferenceFragment;
 
 public class PBBootBroadcastReceiver extends BroadcastReceiver {

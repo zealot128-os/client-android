@@ -36,7 +36,7 @@ import fr.s13d.photobackup.interfaces.PBMediaStoreInterface;
 
 public class PBService extends Service implements PBMediaStoreInterface, PBMediaSenderInterface {
 
-	private static final String LOG_TAG = "PBService";
+    private static final String LOG_TAG = "PBService";
     private static MediaContentObserver newMediaContentObserver;
     private PBMediaStore mediaStore;
     private PBMediaSender mediaSender;
@@ -175,16 +175,17 @@ public class PBService extends Service implements PBMediaStoreInterface, PBMedia
             Log.i(LOG_TAG, "MediaContentObserver:onChange()");
             Log.i(LOG_TAG, "Content-URI: " + uri);
 
-            if (uri.toString().equals("content://media/external/images/media")) {
 
+            if (uri.toString().equals("content://media/external/images/media")) {
                 try {
                     final PBMedia media = mediaStore.getLastMediaInStore();
                     if (media == null) {
+                        Log.w(LOG_TAG, "Skipping filtered media");
                         return;
                     }
                     media.setState(PBMedia.PBMediaState.WAITING);
                     mediaSender.send(media, false);
-                    //mediaStore.sync();
+                    mediaStore.sync();
                 }
                 catch (Exception e) {
                     Log.e(LOG_TAG, "Upload failed :-(");

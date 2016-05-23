@@ -30,6 +30,8 @@ import fr.s13d.photobackup.preferences.PBPreferenceFragment;
 public class PBActivity extends Activity {
 
     private static final PBPreferenceFragment preferenceFragment = new PBPreferenceFragment();
+    private static final String LOG_TAG = "PBActivity";
+
 
 
     //////////////
@@ -51,10 +53,10 @@ public class PBActivity extends Activity {
 
         if (requestCode == PBPreferenceFragment.PERMISSION_READ_EXTERNAL_STORAGE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.i("PBPreferenceFragment", "READ_EXTERNAL_STORAGE permission granted.");
+                Log.i(LOG_TAG, "READ_EXTERNAL_STORAGE permission granted.");
                 preferenceFragment.testMediaSender(); // continue to next step
             } else {
-                Log.i("PBPreferenceFragment", "READ_EXTERNAL_STORAGE was NOT granted.");
+                Log.i(LOG_TAG, "READ_EXTERNAL_STORAGE was NOT granted.");
                 Toast.makeText(this, R.string.toast_permission_not_granted, Toast.LENGTH_LONG).show();
             }
         }

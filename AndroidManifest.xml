@@ -32,13 +32,13 @@
 		<service android:name=".PBService" android:exported="false" />
 
       <!-- Declaring broadcast receiver for BOOT_COMPLETED event -->
-      <receiver android:name=".PBBootBroadcastReceiver">
+      <receiver android:name=".broadcastReceiver.PBBootBroadcastReceiver">
         <intent-filter>
           <action android:name="android.intent.action.BOOT_COMPLETED" />
         </intent-filter>
       </receiver>
       <!-- Declaring broadcast receiver for BOOT_COMPLETED event -->
-      <receiver android:name=".PBWifiBroadcastReceiver">
+      <receiver android:name=".broadcastReceiver.PBWifiBroadcastReceiver">
         <intent-filter>
           <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
         </intent-filter>

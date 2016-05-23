@@ -202,13 +202,16 @@ public class PBPreferenceFragment extends PreferenceFragment
             setSummaries();
         } else if (key.equals(PREF_BUCKETS)) {
             if (currentService != null) {
-                currentService.getMediaStore().sync();
+                // Restart service, so mediaStore is updated with new prefs / chosen buckets
+                if (isPhotoBackupServiceRunning()) {
+                    stopService();
+                    startService();
+                }
             }
             setSummaries();
         } else if (sharedPreferences == null) {
             Log.e(LOG_TAG, "Error: preferences == null");
         }
-
     }
 
 
@@ -227,9 +230,7 @@ public class PBPreferenceFragment extends PreferenceFragment
                 Log.i(LOG_TAG, "Migration done!");
             }
         }
-
     }
-
 
     private void initPreferences() {
         // init
@@ -244,9 +245,7 @@ public class PBPreferenceFragment extends PreferenceFragment
         setSummaries();
     }
 
-
     private void setSummaries() {
-
         String buckets = "";
         Set<String> selectedBuckets = preferences.getStringSet(PREF_BUCKETS, null);
         if (selectedBuckets != null && bucketNames != null) {
@@ -311,14 +310,26 @@ public class PBPreferenceFragment extends PreferenceFragment
                 switchPreference.setChecked(false);
             }
         } else if (isPhotoBackupServiceRunning() && currentService != null) {
-            Log.i(LOG_TAG, "stop PhotoBackup service");
-            getActivity().unbindService(serviceConnection);
-            isBoundToService = false;
-            currentService.stopSelf();
-            currentService = null;
-            updateUploadJournalPreference();
+            stopService();
         }
     }
+
+    private void stopService() {
+        Log.i(LOG_TAG, "stop PhotoBackup service");
+        getActivity().unbindService(serviceConnection);
+        isBoundToService = false;
+        currentService.stopSelf();
+        currentService = null;
+        updateUploadJournalPreference();
+    }
+
+    private void startService() {
+        final Intent serviceIntent = new Intent(getActivity(), PBService.class);
+        getActivity().startService(serviceIntent);
+        getActivity().bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+        isBoundToService = true;
+    }
+
 
 
     private void checkPermissions() {
@@ -411,10 +422,7 @@ public class PBPreferenceFragment extends PreferenceFragment
     // PBMediaSenderEvents callbacks //
     ///////////////////////////////////
     public void onTestSuccess() {
-        final Intent serviceIntent = new Intent(getActivity(), PBService.class);
-        getActivity().startService(serviceIntent);
-        getActivity().bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
-        isBoundToService = true;
+        startService();
     }
 
 
@@ -430,7 +438,7 @@ public class PBPreferenceFragment extends PreferenceFragment
 
 
     public void onSendSuccess() {}
-    public void onSendFailure()  {}
+    public void onSendFailure() {}
 
 
     /////////////
