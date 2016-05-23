@@ -145,5 +145,4 @@ public class PBMediaStoreQueries {
             cursor.close();
         }
     }
-
 }

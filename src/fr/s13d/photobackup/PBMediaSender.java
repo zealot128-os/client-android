@@ -218,17 +218,19 @@ public class PBMediaSender {
         this.builder.setContentIntent(resultPendingIntent);
 
         // add button action to stop the service
-        Intent stopIntent = new Intent(context, PBService.class);
-        stopIntent.setAction(PBApplication.PB_STOP_SERVICE);
-        PendingIntent stopPendingIntent = PendingIntent.getService(context, 0, stopIntent, 0);
+        if (false) {
+            Intent stopIntent = new Intent(context, PBService.class);
+            stopIntent.setAction(PBApplication.PB_STOP_SERVICE);
+            PendingIntent stopPendingIntent = PendingIntent.getService(context, 0, stopIntent, 0);
 
-        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            this.builder.addAction(android.R.drawable.ic_delete,
-                    context.getResources().getString(R.string.stop_service), stopPendingIntent);
-        } else {
-            Notification.Action.Builder actionBuilder = new Notification.Action.Builder(android.R.drawable.ic_delete,
-                    context.getResources().getString(R.string.stop_service), stopPendingIntent);
-            this.builder.addAction(actionBuilder.build());
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                this.builder.addAction(android.R.drawable.ic_delete,
+                        context.getResources().getString(R.string.stop_service), stopPendingIntent);
+            } else {
+                Notification.Action.Builder actionBuilder = new Notification.Action.Builder(android.R.drawable.ic_delete,
+                        context.getResources().getString(R.string.stop_service), stopPendingIntent);
+                this.builder.addAction(actionBuilder.build());
+            }
         }
     }
 
