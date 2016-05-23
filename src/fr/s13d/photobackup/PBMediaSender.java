@@ -23,24 +23,11 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
-import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.widget.Toast;
-
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Credentials;
-import okhttp3.FormBody;
-import okhttp3.MediaType;
-import okhttp3.MultipartBody;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,8 +36,15 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import fr.s13d.photobackup.interfaces.PBMediaSenderInterface;
-import fr.s13d.photobackup.preferences.PBPreferenceFragment;
-import fr.s13d.photobackup.preferences.PBServerPreferenceFragment;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.FormBody;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 
 public class PBMediaSender {
@@ -61,8 +55,9 @@ public class PBMediaSender {
     private final static String TEST_PATH = "/test";
     private final Context context;
     private final String serverUrl;
-    private final SharedPreferences prefs;
+    //private final SharedPreferences prefs;
     private final NotificationManager notificationManager;
+    private final PreferenceWrapper preferenceWrapper;
     private String credentials;
     private Notification.Builder builder;
     private OkHttpClient okClient;
@@ -74,8 +69,8 @@ public class PBMediaSender {
     public PBMediaSender(final Context context) {
         this.context = context;
         this.notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        this.prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        this.serverUrl = removeFinalSlashes(prefs.getString(PBServerPreferenceFragment.PREF_SERVER_URL, ""));
+        this.preferenceWrapper = new PreferenceWrapper(context);
+        this.serverUrl = preferenceWrapper.getServerUrl();
         buildNotificationBuilder();
     }
 
@@ -89,21 +84,18 @@ public class PBMediaSender {
     // Send media //
     ////////////////
     public void send(final PBMedia media, boolean manual) {
+        PreferenceWrapper preferenceWrapper = new PreferenceWrapper(context);
         // network
-        String wifiOnlyString = prefs.getString(PBPreferenceFragment.PREF_WIFI_ONLY,
-                context.getResources().getString(R.string.only_wifi_default));
-        Boolean wifiOnly = wifiOnlyString.equals(context.getResources().getString(R.string.only_wifi));
+        Boolean wifiOnly = preferenceWrapper.wifiOnly();
         ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo info = cm.getActiveNetworkInfo();
         Boolean onWifi = info != null && info.isConnected() && info.getType() == ConnectivityManager.TYPE_WIFI;
 
         // recently taken picture
-        String uploadRecentOnlyString = prefs.getString(PBPreferenceFragment.PREF_RECENT_UPLOAD_ONLY,
-                context.getResources().getString(R.string.only_recent_upload_default));
-        Boolean uploadRecentOnly = uploadRecentOnlyString.equals(context.getResources().getString(R.string.only_recent_upload));
-        Boolean recentPicture = (System.currentTimeMillis() / 1000 - media.getDateAdded()) < 600;
+        Boolean uploadRecentOnly = preferenceWrapper.uploadRecentlyOnly();
+        Boolean recentPicture = media.age() < 600;
 
-        Log.i(LOG_TAG, "Connectivity: onWifi=" + onWifi.toString() + ", wifiOnly=" + wifiOnly.toString() + ", recentPicture=" + recentPicture.toString());
+        Log.d(LOG_TAG, "Connectivity: onWifi=" + onWifi.toString() + ", wifiOnly=" + wifiOnly.toString() + ", recentPicture=" + recentPicture.toString());
         // test to send or not
         if (manual || (!wifiOnly || onWifi) && (!uploadRecentOnly || recentPicture)) {
             sendMedia(media);
@@ -121,7 +113,7 @@ public class PBMediaSender {
         final File upfile = new File(media.getPath());
         final RequestBody requestBody = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
-                .addFormDataPart(PASSWORD_PARAM, prefs.getString(PBServerPreferenceFragment.PREF_SERVER_PASS_HASH, ""))
+                .addFormDataPart(PASSWORD_PARAM, preferenceWrapper.getPassword())
                 .addFormDataPart(FILESIZE_PARAM, String.valueOf(upfile.length()))
                 .addFormDataPart(UPFILE_PARAM, upfile.getName(), RequestBody.create(MEDIA_TYPE_JPG, upfile))
                 .build();
@@ -160,7 +152,7 @@ public class PBMediaSender {
         toast.show();
 
         final RequestBody requestBody = new FormBody.Builder()
-                .add(PASSWORD_PARAM, prefs.getString(PBServerPreferenceFragment.PREF_SERVER_PASS_HASH, ""))
+                .add(PASSWORD_PARAM, preferenceWrapper.getPassword())
                 .build();
         final Request request = makePostRequest(requestBody, TEST_PATH);
         Log.i(LOG_TAG, "Initiating test call to " + request.url());
@@ -206,19 +198,11 @@ public class PBMediaSender {
     /////////////////////
     // Private methods //
     /////////////////////
-    private void createAuthCredentials() {
-        // add HTTP Basic Auth to the client
-        final String login = prefs.getString(PBServerPreferenceFragment.PREF_SERVER_HTTPAUTH_LOGIN, "");
-        final String pass = prefs.getString(PBServerPreferenceFragment.PREF_SERVER_HTTPAUTH_PASS, "");
-        if(prefs.getBoolean(PBServerPreferenceFragment.PREF_SERVER_HTTPAUTH_SWITCH, false) &&
-                !prefs.getString(PBServerPreferenceFragment.PREF_SERVER_HTTPAUTH_LOGIN, "").isEmpty() &&
-                !prefs.getString(PBServerPreferenceFragment.PREF_SERVER_HTTPAUTH_PASS, "").isEmpty()) {
-            this.credentials = Credentials.basic(login, pass);
-        } else {
-            this.credentials = null;
-        }
-    }
 
+    // add HTTP Basic Auth to the client
+    private void createAuthCredentials() {
+        this.credentials = preferenceWrapper.getHttpAuth();
+    }
 
     private void buildNotificationBuilder() {
         this.builder = new Notification.Builder(context);
@@ -250,6 +234,9 @@ public class PBMediaSender {
 
     private void sendDidSucceed(final PBMedia media) {
         builder.setSmallIcon(R.drawable.ic_done_white_48dp);
+        if(media.getState() == PBMedia.PBMediaState.ERROR) {
+            decrementFailureCount();
+        }
         media.setState(PBMedia.PBMediaState.SYNCED);
         media.setErrorMessage("");
         for (PBMediaSenderInterface senderInterface : interfaces) {
@@ -342,25 +329,16 @@ public class PBMediaSender {
     }
 
 
-    ///////////
-    // Utils //
-    ///////////
-    static public String removeFinalSlashes(String s) {
-        if (s == null || s.length() == 0) {
-            return s;
-        }
-        int count = 0;
-        int length = s.length();
-        while (s.charAt(length - 1 - count) == '/') {
-            count++;
-        }
 
-        return s.substring(0, s.length() - count);
-    }
 
 
     private static void incrementSuccessCount() {
         successCount++;
+    }
+
+
+    private static void decrementFailureCount() {
+        if(failureCount > 0) failureCount--;
     }
 
 
